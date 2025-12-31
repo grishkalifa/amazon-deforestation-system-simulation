@@ -16,6 +16,8 @@ Outputs:
 from dataclasses import dataclass
 import math
 from typing import Dict, List, Tuple
+import os
+
 
 import matplotlib.pyplot as plt
 
@@ -109,8 +111,15 @@ def main() -> None:
     plt.ylabel("Forest remaining (hectares)")
     plt.grid(True, alpha=0.3)
     plt.legend()
+
+    # Ensure outputs directory exists
+    os.makedirs("outputs", exist_ok=True)
+
+    # Save figure
     plt.tight_layout()
-    plt.show()
+    plt.savefig("outputs/forest_remaining_v0_1.png", dpi=200)
+
+   plt.close()
 
 
 if __name__ == "__main__":
