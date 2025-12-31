@@ -119,7 +119,7 @@ def main() -> None:
     plt.tight_layout()
     plt.savefig("outputs/forest_remaining_v0_1.png", dpi=200)
 
-   plt.close()
+    plt.close()
 
 
 if __name__ == "__main__":

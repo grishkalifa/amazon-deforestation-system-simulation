@@ -195,6 +195,89 @@ Planned extensions include:
 
 ---
 
+## 11. Initial Conclusions (Version 0.1)
+
+### 11.1 Current State of Deforestation in Colombia
+
+Based on the results of the Version 0.1 simulation, deforestation in the Colombian Amazon can be described as **alarming but not yet critical** under current baseline conditions.
+
+At the present deforestation rate (average 2020–2024), the system does not indicate an immediate collapse. However, the long-term trajectory shows a **persistent erosion of forest cover** that, if left unaltered, leads to the crossing of precautionary risk thresholds within this century.
+
+This finding is crucial:  
+**the absence of immediate collapse does not imply safety**. It implies responsibility.
+
+---
+
+### 11.2 Responsibility Across Generations
+
+The model highlights a fundamental intergenerational issue.
+
+Maintaining current deforestation rates means accepting that future generations will inherit a significantly reduced Amazon forest, with fewer ecological, climatic, and cultural possibilities than those available today.
+
+In other words, the problem is not only how much forest remains today, but **what range of futures we are allowing to exist**.
+
+System dynamics makes this explicit: slow degradation, when accumulated over decades, becomes irreversible loss.
+
+---
+
+### 11.3 Structural Protection During Armed Conflict
+
+One counterintuitive result supported by historical data is that forest loss accelerated after the peace process.
+
+This does **not** imply that armed groups protected the forest out of environmental concern.  
+However, territorial control by armed actors unintentionally limited large-scale land-use expansion, road construction, and extractive activity.
+
+When that control disappeared, a structural vacuum emerged. The forest became exposed to rapid transformation driven by land grabbing, fires, and illegal exploitation.
+
+This illustrates a key systemic lesson:  
+**environmental outcomes often depend more on power structures than on environmental intentions**.
+
+---
+
+### 11.4 Making the Scale Understandable
+
+Abstract numbers hide reality. To make the impact tangible:
+
+- Colombia currently loses approximately **81,000 hectares of Amazon forest per year**.
+- A standard football field occupies approximately **0.7 hectares**.
+
+This means Colombia loses the equivalent of:
+
+**≈ 115,000 football fields of Amazon forest every single year.**
+
+That is:
+- approximately **315 football fields per day**
+- approximately **13 football fields per hour**
+
+This framing helps translate systemic loss into human-scale perception.
+
+---
+
+### 11.5 The 80% Threshold and Why It Matters
+
+Under the baseline scenario, the model estimates that Colombia would cross the **80% remaining forest threshold around the year 2122**.
+
+This threshold is important because scientific literature consistently identifies the **20–25% cumulative forest loss range** as a zone where the Amazon becomes highly vulnerable to irreversible degradation when combined with additional stressors such as climate change, drought, and fires.
+
+Crossing this threshold does not mean immediate collapse.  
+It means **loss of resilience** — the system’s capacity to absorb shocks and recover.
+
+Once resilience is lost, even moderate disturbances can trigger large-scale transformation.
+
+---
+
+### 11.6 Final Insight of Version 0.1
+
+The central insight of Version 0.1 is not a prediction, but a warning embedded in time.
+
+The Colombian Amazon is not collapsing today.  
+However, it is being placed on a trajectory where collapse becomes **a slow decision made year after year**.
+
+Version 0.1 demonstrates that deforestation is not only an environmental issue, but a **systems-level responsibility problem**, where present inaction defines the limits of future possibility.
+
+Future versions of the model will explore how shocks, regeneration, and feedback mechanisms can either accelerate or reverse this trajectory.
+
+
 ### Status
 **Version:** 0.1  
 **Purpose:** Structural system understanding  
