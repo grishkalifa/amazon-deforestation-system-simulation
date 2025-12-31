@@ -1,2 +1,23 @@
-# amazon-deforestation-system-simulation
-System dynamics simulation of deforestation in the Colombian Amazon
+# Amazon Deforestation System Simulation (V0.1)
+
+This project models the evolution of forest cover in the Colombian Amazon
+using a system dynamics approach (stocks & flows).
+
+The goal is to understand how different deforestation regimes affect
+long-term outcomes and critical thresholds under simplified assumptions.
+
+## Project Scope
+- System dynamics model (single stock, aggregated flows)
+- Annual time steps
+- No regeneration in V0.1 (worst-case baseline)
+- Focus on structural behavior, not precise prediction
+
+## Structure
+- `src/` – simulation code
+- `report/` – technical report and interpretation
+- `docs/` – assumptions and limitations
+
+## How to Run
+```bash
+python src/simulation_v0_1.py
+
