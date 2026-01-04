@@ -1,73 +1,125 @@
 """
 Amazon Deforestation System Simulation — Colombia (V0.2)
 
-V0.2 introduces *shocks* (time-varying drivers) on top of a simple baseline:
-- Post-accord regime shift (multi-year elevated pressure)
-- El Niño years (episodic multiplier)
-- Fire pulses (additive extra hectares)
+V0.2 (channelized shocks) separates deforestation into two components:
+
+1) Human-driven deforestation (D_human):
+   - Baseline annual deforestation proxy (D_base)
+   - Post-accord regime shift (persistent multiplier from 2017 onward)
+
+2) Fire-driven loss (D_fire):
+   - Additive pulse in selected fire years
+   - El Niño increases ONLY the fire component (multiplies D_fire), not D_human
+
+Key design choice (to avoid double counting):
+- Fire pulses are NOT applied by default in 2017–2018, because post-accord regime
+  may already capture part of the same land-use expansion dynamics in those years.
 
 Still simplified:
-- Single stock: forest cover (hectares)
-- Annual discrete time steps
-- Regeneration = 0 (kept intentionally simple for interpretability)
+- Single forest stock (hectares)
+- Annual discrete steps
+- Regeneration = 0
 
 Outputs:
-- A plot of remaining forest for multiple shock scenarios
-- Printed threshold crossing years (80% and 75% remaining) per scenario
-- Saved PNG in /outputs
+- PNG saved in /outputs
+- Threshold crossing years printed (80% and 75% remaining)
 """
 
-import math
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import matplotlib.pyplot as plt
 
 
-def simulate_with_shocks(
+# -----------------------------
+# PARAMETERS (Scenario knobs for V0.2)
+# -----------------------------
+
+# Baseline (human-driven) deforestation proxy (ha/year)
+D_BASE_HUMAN: float = 81_240
+
+# Forest stock (ha)
+F0: int = 39_011_117
+
+# Simulation horizon
+START_YEAR: int = 2000
+HORIZON_YEARS: int = 200
+
+
+# -----------------------------
+# SHOCKS (Channelized)
+# -----------------------------
+
+# Post-accord persistent regime shift on HUMAN component only
+POST_ACCORD_START: int = 2017
+POST_ACCORD_MULT_HUMAN: float = 0.30   # +30% on D_human from 2017 onward (scenario assumption)
+
+# Fire pulses (additive hectares lost) - NOT applied by default in 2017–2018
+FIRE_YEARS: Set[int] = {2019, 2024}    # intentionally excludes 2017–2018 to avoid double count
+FIRE_EXTRA_HA: float = 15_000          # additive hectares in fire years (scenario assumption)
+
+# El Niño increases ONLY the fire component
+ELNINO_YEARS: Set[int] = {2015, 2016, 2023, 2024}
+ELNINO_MULT_FIRE: float = 0.20         # +20% on D_fire in El Niño years (scenario assumption)
+
+
+# -----------------------------
+# THRESHOLDS
+# -----------------------------
+THRESHOLDS = {
+    "20% loss (80% remaining)": 0.80,
+    "25% loss (75% remaining)": 0.75,
+}
+
+
+def simulate_channelized(
     start_year: int,
     years_horizon: int,
     F0: int,
-    D_base: float,
-    post_accord_mul: Dict[int, float] | None = None,
-    elnino_mul: Dict[int, float] | None = None,
-    fire_extra_ha: Dict[int, float] | None = None,
-) -> Tuple[List[int], List[float], List[float]]:
+    D_base_human: float,
+    post_accord_on: bool,
+    fires_on: bool,
+    elnino_on: bool,
+) -> Tuple[List[int], List[float], List[float], List[float]]:
     """
     Returns:
-      years: list of calendar years (length = years_horizon + 1)
-      forest: forest stock each year (length = years_horizon + 1)
-      deforestation: realized deforestation each year (length = years_horizon)
+      years: calendar years (len = horizon + 1)
+      forest: forest stock each year (len = horizon + 1)
+      D_human_series: realized human deforestation each year (len = horizon)
+      D_fire_series: realized fire loss each year (len = horizon)
     """
-    post_accord_mul = post_accord_mul or {}
-    elnino_mul = elnino_mul or {}
-    fire_extra_ha = fire_extra_ha or {}
-
     years = [start_year + t for t in range(years_horizon + 1)]
     forest = [float(F0)]
-    defo = []
+
+    D_human_series: List[float] = []
+    D_fire_series: List[float] = []
 
     for t in range(years_horizon):
         y = years[t]
 
-        m_post = post_accord_mul.get(y, 0.0)   # e.g., 0.40 means +40%
-        m_eln = elnino_mul.get(y, 0.0)         # e.g., 0.25 means +25%
-        extra_fire = fire_extra_ha.get(y, 0.0) # e.g., +20000 ha that year
+        # --- HUMAN component (post-accord regime shift) ---
+        m_post = POST_ACCORD_MULT_HUMAN if (post_accord_on and y >= POST_ACCORD_START) else 0.0
+        D_human = D_base_human * (1.0 + m_post)
 
-        D_t = (D_base * (1.0 + m_post) * (1.0 + m_eln)) + extra_fire
+        # --- FIRE component (pulse + El Niño multiplier ONLY on fires) ---
+        D_fire_base = FIRE_EXTRA_HA if (fires_on and y in FIRE_YEARS) else 0.0
+        m_eln_fire = ELNINO_MULT_FIRE if (elnino_on and y in ELNINO_YEARS) else 0.0
+        D_fire = D_fire_base * (1.0 + m_eln_fire)
 
-        next_F = forest[-1] - D_t  # regeneration still 0 in V0.2
+        # Total loss this year
+        D_total = D_human + D_fire
+
+        next_F = forest[-1] - D_total  # regeneration still 0 in V0.2
         forest.append(max(next_F, 0.0))
-        defo.append(D_t)
 
-    return years, forest, defo
+        D_human_series.append(D_human)
+        D_fire_series.append(D_fire)
+
+    return years, forest, D_human_series, D_fire_series
 
 
-def first_crossing_year(years: List[int], forest: List[float], threshold_value: float) -> int | None:
-    """
-    Returns the first calendar year where forest <= threshold_value.
-    If never crossed, returns None.
-    """
+def first_crossing_year(years: List[int], forest: List[float], threshold_value: float) -> Optional[int]:
+    """Returns first year where forest <= threshold_value; None if not crossed within horizon."""
     for y, f in zip(years, forest):
         if f <= threshold_value:
             return y
@@ -75,98 +127,63 @@ def first_crossing_year(years: List[int], forest: List[float], threshold_value: 
 
 
 def main() -> None:
-    # -----------------------------
-    # Core parameters (kept from V0.1)
-    # -----------------------------
-    F0 = 39_011_117  # initial forest stock (ha)
-    D_BAU = 81_240   # baseline deforestation (ha/year) proxy
-
-    # IMPORTANT: start before 2017 so post-accord shock is visible in simulation
-    start_year = 2000
-    horizon_years = 200
-
-    # -----------------------------
-    # V0.2 SHOCK DEFINITIONS (assumptions)
-    # NOTE: In V0.2 these are scenario assumptions; in V0.3 we calibrate to data.
-    # -----------------------------
-    post_accord = {
-        2017: 0.40,
-        2018: 0.30,
-        2019: 0.25,
-        2020: 0.20,
-        2021: 0.15,
-    }
-
-    elnino = {
-        2015: 0.25,
-        2016: 0.25,
-        2023: 0.20,
-        2024: 0.20,
-    }
-
-    fires = {
-        2019: 20_000,
-        2024: 15_000,
-    }
-
-    thresholds = {
-        "20% loss (80% remaining)": 0.80,
-        "25% loss (75% remaining)": 0.75,
-    }
-
-    # -----------------------------
-    # Scenarios (V0.2)
-    # -----------------------------
-    scenarios_v02 = [
-        ("BAU (no shocks)", D_BAU, {}, {}, {}),
-        ("Post-accord shock", D_BAU, post_accord, {}, {}),
-        ("Post-accord + El Niño + fires", D_BAU, post_accord, elnino, fires),
+    scenarios = [
+        ("BAU (human only, no shocks)", False, False, False),
+        ("Post-accord (human regime shift)", True, False, False),
+        ("Post-accord + fires", True, True, False),
+        ("Post-accord + fires + El Niño (fires amplified)", True, True, True),
     ]
 
-    results_v02: Dict[str, Tuple[List[int], List[float], List[float]]] = {}
+    results: Dict[str, Tuple[List[int], List[float], List[float], List[float]]] = {}
 
-    for name, D_base, s_post, s_eln, s_fire in scenarios_v02:
-        years, forest, defo = simulate_with_shocks(
-            start_year=start_year,
-            years_horizon=horizon_years,
+    for name, post_on, fire_on, eln_on in scenarios:
+        years, forest, Dh, Df = simulate_channelized(
+            start_year=START_YEAR,
+            years_horizon=HORIZON_YEARS,
             F0=F0,
-            D_base=D_base,
-            post_accord_mul=s_post,
-            elnino_mul=s_eln,
-            fire_extra_ha=s_fire,
+            D_base_human=D_BASE_HUMAN,
+            post_accord_on=post_on,
+            fires_on=fire_on,
+            elnino_on=eln_on,
         )
-        results_v02[name] = (years, forest, defo)
+        results[name] = (years, forest, Dh, Df)
 
     # -----------------------------
-    # Print threshold crossing years (V0.2, based on time series)
+    # Print threshold crossing years
     # -----------------------------
-    print("\n=== Threshold Crossing Years (V0.2, shocks, R=0) ===")
-    for name, _, _, _, _ in scenarios_v02:
-        years, forest, _ = results_v02[name]
-        print(f"\nScenario: {name}")
-        for label, frac in thresholds.items():
+    print("\n=== Threshold Crossing Years (V0.2, channelized shocks, R=0) ===")
+    print(f"Post-accord: start={POST_ACCORD_START}, mult_human=+{int(POST_ACCORD_MULT_HUMAN*100)}% (persistent)")
+    print(f"Fire years={sorted(list(FIRE_YEARS))}, fire_extra={int(FIRE_EXTRA_HA)} ha (scenario param)")
+    print(f"El Niño years={sorted(list(ELNINO_YEARS))}, mult_fire=+{int(ELNINO_MULT_FIRE*100)}% (scenario param)")
+    print("Note: Fires are intentionally NOT applied in 2017–2018 to avoid double counting.\n")
+
+    for name, _, _, _ in scenarios:
+        years, forest, _, _ = results[name]
+        print(f"Scenario: {name}")
+        for label, frac in THRESHOLDS.items():
             thr_value = frac * F0
             y_cross = first_crossing_year(years, forest, thr_value)
             if y_cross is None:
                 print(f"  {label}: Not crossed within horizon")
             else:
                 print(f"  {label}: {y_cross}")
+        print("")
 
     # -----------------------------
-    # Plot (V0.2)
+    # Plot forest stock
     # -----------------------------
     plt.figure(figsize=(11, 5))
 
-    for name, _, _, _, _ in scenarios_v02:
-        years, forest, _ = results_v02[name]
+    for name, _, _, _ in scenarios:
+        years, forest, _, _ = results[name]
         plt.plot(years, forest, linewidth=2, label=name)
 
-    for label, frac in thresholds.items():
+    for label, frac in THRESHOLDS.items():
         thr = frac * F0
         plt.axhline(thr, linestyle="--")
-        plt.text(start_year + 1, thr, f"  {label}", va="bottom")
+        plt.text(START_YEAR + 1, thr, f"  {label}", va="bottom")
 
-    plt.title("Colombian Amazon — Forest Remaining Over Time (V0.2, Shocks, No Regeneration)")
+    plt.title("Colombian Amazon — Forest Remaining (V0.2, Channelized Shocks, No Regeneration)")
     plt.xlabel("Year")
     plt.ylabel("Forest remaining (hectares)")
     plt.grid(True, alpha=0.3)
@@ -174,7 +191,7 @@ def main() -> None:
 
     os.makedirs("outputs", exist_ok=True)
     plt.tight_layout()
-    plt.savefig("outputs/forest_remaining_v0_2_shocks.png", dpi=200)
+    plt.savefig("outputs/forest_remaining_v0_2_channelized.png", dpi=200)
     plt.close()
 
 
